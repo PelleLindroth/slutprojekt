@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const Task = require("./taskModel");
 const Message = require("./messageModel");
-const {InvalidCredentials, Unauthorized, TokenExpired} = require('../errors/index')
+const { InvalidCredentials, Unauthorized, TokenExpired } = require('../errors/index')
 
 const User = db.define("User", {
   name: {
@@ -52,17 +52,16 @@ User.authenticate = async ({ email, password }) => {
   if (!valid) {
     throw new InvalidCredentials()
   }
-  console.log(process.env.JWT_SECRET);
+
   const payload = { email, id: user.id, role: user.role }
   const token = jwt.sign(payload, process.env.JWT_SECRET)
-  console.log(payload);
-  console.log(token);
-  return { 
+
+  return {
     id: user.id,
     name: user.name,
     email: user.email,
     role: user.role,
-    token 
+    token
   }
 
 }

@@ -1,4 +1,4 @@
-const { MissingCredentials } = require("../errors");
+const { MissingCredentials, ResourceNotFound } = require("../errors");
 const { Op } = require("sequelize");
 const User = require("../models/userModel");
 const Task = require("../models/taskModel");
@@ -8,7 +8,6 @@ const authenticate = async (req, res, next) => {
     const user = await User.authenticate(req.body);
     res.json(user);
   } catch (error) {
-    console.log(error.errorMessage);
     next(error);
   }
 };
@@ -35,25 +34,56 @@ const getOwnAccount = async (req, res, next) => {
   try {
     const user = await User.findOne({
       where: { email: req.user.email },
+      attributes: { exclude: ['password', 'createdAt', 'updatedAt'] }
     });
 
     if (req.user.role === "admin") {
-      res.json({ name: user.name, email: user.email, role: user.role });
+      res.json({ user });
     } else {
       const tasks = await Task.findAll({
         where: {
           [Op.or]: [{ workerId: req.user.id }, [{ clientId: req.user.id }]],
         },
       });
-      res.json({ name: user.name, email: user.email, role: user.role, tasks });
+      res.json({ user, tasks });
     }
   } catch (error) {
     next(error);
   }
 };
 
+const getUsers = async (req, res, next) => {
+  try {
+    const { role, search } = req.query
+    let filterObject = {}
+
+    if (!role && !search) {
+      filterObject = { attributes: { exclude: ['password'] } }
+
+    } else if (role && !search) {
+      if (!['client', 'admin', 'worker'].includes(role)) {
+        throw new ResourceNotFound('User')
+      }
+      filterObject = { where: { role }, attributes: { exclude: ['password'] } }
+
+    } else if (!role && search) {
+      filterObject = { where: { name: { [Op.substring]: search } }, attributes: { exclude: ['password'] } }
+    } else if (role && search) {
+      filterObject = { where: { name: { [Op.substring]: search }, role }, attributes: { exclude: ['password'] } }
+    }
+
+    const users = await User.findAll(filterObject)
+    if (!users.length) { throw new ResourceNotFound('Users') }
+    res.json(users)
+
+  } catch (error) {
+    next(error)
+  }
+}
+
 module.exports = {
   authenticate,
   createUser,
   getOwnAccount,
+  getUsers
 };
