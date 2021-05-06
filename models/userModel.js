@@ -26,13 +26,32 @@ const User = db.define("User", {
     allowNull: false,
   },
   role: {
-    type: DataTypes.STRING,
-    enum: ["client", "worker", "admin"],
+    type: DataTypes.ENUM("client", "worker", "admin"),
     defaultValue: "client",
   },
 });
 
 User.belongsToMany(Task, { through: Message });
 Task.belongsToMany(User, { through: Message });
+
+
+User.beforeCreate((user, options) => {
+  user.password = bcrypt.hashSync(user.password, 10)
+})
+
+// User.authenticate = async ({ email, password }) => {
+//   const user = await User.findOne({ where: { email } })
+//   if (!user) return ({ success: false, message: 'Invalid credentials. Please check your email' })
+
+//   const valid = bcrypt.compareSync(password, user.password)
+
+//   if (valid) {
+//     const payload = { email, id: user.id }
+//     const token = jwt.sign(payload, process.env.JWT_SECRET)
+//     return { success: true, user: { id: user.id, name: user.name, email: user.email, favoriteMix: user.favoriteMix }, token }
+//   } else {
+//     return ({ success: false, message: 'Access denied. Your email and password don\'t match' })
+//   }
+// }
 
 module.exports = User;

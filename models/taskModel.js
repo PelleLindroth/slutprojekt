@@ -1,5 +1,6 @@
 const db = require("../database/connection");
 const { DataTypes } = require("sequelize");
+const User = require('./userModel')
 
 const Task = db.define(
   "Task",
@@ -15,6 +16,14 @@ const Task = db.define(
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    clientId: {
+      type: DataTypes.NUMBER,
+      allowNull: false
+    },
+    workerId: {
+      type: DataTypes.NUMBER,
+      allowNull: false
+    }
   },
   {
     timestamps: true,
