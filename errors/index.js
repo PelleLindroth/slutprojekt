@@ -24,10 +24,11 @@ class InvalidCredentials extends CustomError {
   }
 }
 
+
 class MissingCredentials extends CustomError {
   constructor(...arr) {
     super();
-    this.errorCode = 401;
+    this.errorCode = 400;
     this.errorMessage = `Missing credentials: ${arr.join(", ")} required`;
   }
 }

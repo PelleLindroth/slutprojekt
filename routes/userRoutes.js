@@ -19,4 +19,8 @@ userRoutes.get("/users", authToken, authRoles(["worker", "admin"]), userControll
 
 userRoutes.get("/users/:id", authToken, userController.getById)
 
+userRoutes.patch("/users/:id", authToken, authRoles(["admin"]), userController.updateUser)
+
+userRoutes.patch("/me", authToken, userController.updateUser)
+
 module.exports = userRoutes;
