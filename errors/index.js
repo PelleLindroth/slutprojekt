@@ -1,77 +1,87 @@
-class CustomError extends Error{}
+class CustomError extends Error {}
 
 class Forbidden extends CustomError {
-    constructor() {
-        super()
-        this.errorCode = 403
-        this.errorMessage = "Access denied!"
-    }
+  constructor() {
+    super();
+    this.errorCode = 403;
+    this.errorMessage = "Access denied!";
+  }
 }
 
-class ResourceNotFound extends CustomError{
-    constructor(payload){
-    super()
-    this.errorCode = 404
-    this.errorMessage = `${payload} not found.`
-    }
+class ResourceNotFound extends CustomError {
+  constructor(payload) {
+    super();
+    this.errorCode = 404;
+    this.errorMessage = `${payload} not found.`;
+  }
 }
 
-class InvalidCredentials extends CustomError{
-    constructor(){
-    super()
-    this.errorCode = 401
-    this.errorMessage = `Email and password don't match`
-    }
+class InvalidCredentials extends CustomError {
+  constructor() {
+    super();
+    this.errorCode = 401;
+    this.errorMessage = `Email and password don't match`;
+  }
 }
 
-class Unauthorized extends CustomError{
-    constructor(){
-    super()
-    this.errorCode = 401
-    this.errorMessage = `Unauthorized.`
-    }
+
+class MissingCredentials extends CustomError {
+  constructor(...arr) {
+    super();
+    this.errorCode = 400;
+    this.errorMessage = `Missing credentials: ${arr.join(", ")} required`;
+  }
 }
 
-class TokenExpired extends CustomError{
-    constructor(){
-    super()
-    this.errorCode = 401
-    this.errorMessage = `Token has expired, please log in again.`
-    }
+class Unauthorized extends CustomError {
+  constructor() {
+    super();
+    this.errorCode = 401;
+    this.errorMessage = `Unauthorized.`;
+  }
 }
 
-class InvalidBody extends CustomError{
-    constructor(...arr){
-    super()
-    this.errorCode = 400
-    this.errorMessage = `${arr.join(', ')} required.`
-    }
+class TokenExpired extends CustomError {
+  constructor() {
+    super();
+    this.errorCode = 401;
+    this.errorMessage = `Token has expired, please log in again.`;
+  }
 }
 
-class UnsupportedFileType extends CustomError{
-    constructor(){
-    super()
-    this.errorCode = 415
-    this.errorMessage = `Unsupported file type.`
-    }
+class InvalidBody extends CustomError {
+  constructor(...arr) {
+    super();
+    this.errorCode = 400;
+    this.errorMessage = `${arr.join(", ")} required.`;
+  }
 }
 
-class Teapot extends CustomError{
-    constructor(){
-    super()
-    this.errorCode = 418
-    this.errorMessage = `I'm a Teapot, yes you are.`
-    }
+class UnsupportedFileType extends CustomError {
+  constructor() {
+    super();
+    this.errorCode = 415;
+    this.errorMessage = `Unsupported file type.`;
+  }
+}
+
+class Teapot extends CustomError {
+  constructor() {
+    super();
+    this.errorCode = 418;
+    this.errorMessage = `I'm a Teapot, yes you are.`;
+  }
 }
 
 module.exports = {
-    Teapot,
-    CustomError,
-    Forbidden,
-    ResourceNotFound,
-    InvalidCredentials,
-    Unauthorized,
-    InvalidBody,
-    UnsupportedFileType,
-    TokenExpired
-}
+  Teapot,
+  CustomError,
+  Forbidden,
+  ResourceNotFound,
+  InvalidCredentials,
+  Unauthorized,
+  InvalidBody,
+  UnsupportedFileType,
+  TokenExpired,
+  MissingCredentials,
+};

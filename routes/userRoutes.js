@@ -1,23 +1,28 @@
-const express = require('express')
-const userRoutes = express.Router()
-const userController = require('../controllers/userController')
-const authToken = require('../middleware/authToken')
-const User = require('../models/userModel')
-const {Unauthorized} = require('../errors/index')
+const express = require("express");
+const userRoutes = express.Router();
+const userController = require("../controllers/userController");
+const authToken = require("../middleware/authToken");
+const authRoles = require("../middleware/authRole");
 
+userRoutes.post("/authenticate", userController.authenticate);
 
-userRoutes.get('/users', authToken, async (req, res, next) => {
-    try{
-        console.log(req.user);
-        // throw new Unauthorized()
-        const users = await User.findAll()
-        res.json({ users })
-    }catch(error){
-        next(error)
-    }
-  
-})
+userRoutes.post(
+  "/users",
+  authToken,
+  authRoles(["admin"]),
+  userController.createUser
+);
 
-userRoutes.post('/authenticate', userController.authenticate)
+userRoutes.get("/me", authToken, userController.getOwnAccount);
 
-module.exports = userRoutes
+userRoutes.get("/users", authToken, authRoles(["worker", "admin"]), userController.getUsers)
+
+userRoutes.get("/users/:id", authToken, userController.getById)
+
+userRoutes.patch("/users/:id", authToken, authRoles(["admin"]), userController.updateUser)
+
+userRoutes.patch("/me", authToken, userController.updateUser)
+
+userRoutes.delete("/users/:id", authToken, authRoles(["admin"]), userController.deleteUser)
+
+module.exports = userRoutes;
