@@ -3,7 +3,7 @@ require("dotenv").config();
 const fileUpload = require("express-fileupload");
 const cors = require('cors');
 const userRoutes = require("./routes/userRoutes");
-// const taskRoutes = require("./routes/taskRoutes");
+const taskRoutes = require("./routes/taskRoutes");
 const errorHandler = require('./middleware/errorHandler')
 const Logger = require('./middleware/logger')
 const PORT = process.env.PORT || 5000;
@@ -16,7 +16,7 @@ app.use(fileUpload());
 
 app.use(Logger)
 
-app.use("/api/v1", userRoutes);
+app.use("/api/v1", userRoutes, taskRoutes);
 
 app.use(errorHandler);
 
