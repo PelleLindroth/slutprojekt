@@ -81,9 +81,25 @@ const getUsers = async (req, res, next) => {
   }
 }
 
+const getById = async (req, res ,next) => {
+  try{
+
+    const id = req.params.id
+    const user = await User.findByPk(id, {attributes: {exclude: ['password', 'createdAt', 'updatedAt']}})
+    if(!user){
+      throw new ResourceNotFound('User')
+    }
+    res.json(user)
+
+  }catch(error){
+    next(error)
+  }
+}
+
 module.exports = {
   authenticate,
   createUser,
   getOwnAccount,
-  getUsers
+  getUsers,
+  getById
 };
