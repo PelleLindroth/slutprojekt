@@ -1,4 +1,4 @@
-const { MissingCredentials, ResourceNotFound, Teapot } = require("../errors");
+const { MissingCredentials, ResourceNotFound, Teapot, Forbidden } = require("../errors");
 const { Op, where } = require("sequelize");
 const User = require("../models/userModel");
 const Task = require("../models/taskModel");
@@ -127,13 +127,29 @@ const updateUser = async (req, res, next) => {
       throw new MissingCredentials(['Fields to update'])
     }
 
-    const update = await User.update(updates, {where: {id}} )
-    if (update[0] == 0) {
+    const response = await User.update(updates, {where: {id}} )
+    if (response[0] == 0) {
       throw new ResourceNotFound('User')
     }
     res.json({message: 'success!'})
 
   }catch(error){
+    next(error)
+  }
+}
+
+const deleteUser = async (req, res ,next) => {
+  try {
+    const id = req.params.id
+    if (req.user.id == id) {
+      throw new Forbidden()
+    }
+    const response = await User.destroy({where: {id}})
+    if (!response) {
+      throw new ResourceNotFound('User')
+    }
+    res.json({message: 'User deleted successfully'})
+  } catch (error) {
     next(error)
   }
 }
@@ -146,4 +162,5 @@ module.exports = {
   getUsers,
   getById,
   updateUser,
+  deleteUser
 };

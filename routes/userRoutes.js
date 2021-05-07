@@ -23,4 +23,6 @@ userRoutes.patch("/users/:id", authToken, authRoles(["admin"]), userController.u
 
 userRoutes.patch("/me", authToken, userController.updateUser)
 
+userRoutes.delete("/users/:id", authToken, authRoles(["admin"]), userController.deleteUser)
+
 module.exports = userRoutes;
