@@ -24,12 +24,19 @@ class InvalidCredentials extends CustomError {
   }
 }
 
-
 class MissingCredentials extends CustomError {
   constructor(...arr) {
     super();
     this.errorCode = 400;
     this.errorMessage = `Missing credentials: ${arr.join(", ")} required`;
+  }
+}
+
+class InvalidRequest extends CustomError {
+  constructor(message) {
+    super();
+    this.errorCode = 400;
+    this.errorMessage = `Invalid request. ${message}.`;
   }
 }
 
@@ -58,10 +65,10 @@ class InvalidBody extends CustomError {
 }
 
 class UnsupportedFileType extends CustomError {
-  constructor() {
+  constructor(message) {
     super();
     this.errorCode = 415;
-    this.errorMessage = `Unsupported file type.`;
+    this.errorMessage = `Unsupported file type. ${message}`;
   }
 }
 
@@ -81,6 +88,7 @@ module.exports = {
   InvalidCredentials,
   Unauthorized,
   InvalidBody,
+  InvalidRequest,
   UnsupportedFileType,
   TokenExpired,
   MissingCredentials,
