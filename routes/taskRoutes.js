@@ -18,4 +18,11 @@ taskRoutes.get(
   taskController.getTasks
 );
 
+taskRoutes.get(
+  '/tasks/:id',
+  authToken,
+  authRoles(['client', 'worker']),
+  taskController.getTasksById
+);
+
 module.exports = taskRoutes;

@@ -4,7 +4,8 @@ const {
   Teapot,
   Forbidden,
   InvalidCredentials,
-  InvalidQueryParams
+  InvalidQueryParams,
+  Unauthorized
 } = require("../errors");
 const { Op, where } = require("sequelize");
 const User = require("../models/userModel");
@@ -37,6 +38,21 @@ const getTasks = async (req, res, next) => {
     case 'worker':
       getWorkerTasks(req, res, next)
       break
+  }
+}
+
+const getTasksById = async (req, res, next) => {
+  try {
+    const task = await Task.findByPk(req.params.id)
+    if (!task) throw new ResourceNotFound('Task')
+
+    if (req.user.role === 'client' && req.user.id !== task.clientId) {
+      throw new Unauthorized()
+    }
+
+    res.json({ task })
+  } catch (error) {
+    next(error)
   }
 }
 
@@ -123,6 +139,7 @@ const getWorkerTasks = async (req, res, next) => {
 module.exports = {
   createTask,
   getTasks,
+  getTasksById,
   getClientsTasks,
   getWorkerTasks,
 };
