@@ -65,10 +65,10 @@ class InvalidBody extends CustomError {
 }
 
 class UnsupportedFileType extends CustomError {
-  constructor() {
+  constructor(message) {
     super();
     this.errorCode = 415;
-    this.errorMessage = `Unsupported file type.`;
+    this.errorMessage = `Unsupported file type. ${message}`;
   }
 }
 

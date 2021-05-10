@@ -6,12 +6,15 @@ const {
   InvalidCredentials,
   InvalidRequest,
   Unauthorized,
+  UnsupportedFileType,
 } = require("../errors");
 const { Op, where } = require("sequelize");
 const User = require("../models/userModel");
 const Task = require("../models/taskModel");
 const Message = require("../models/messageModel");
 const taskRoutes = require("../routes/taskRoutes");
+const path = require("path");
+const { v4: uuid } = require("uuid");
 
 const createTask = async (req, res, next) => {
   try {
@@ -141,7 +144,6 @@ const deleteTask = async (req, res, next) => {
   try {
     const task = await Task.destroy({ where: { id: req.params.id } });
 
-    // Check if related messages are deleted, else refactor
     if (!task) throw new ResourceNotFound("Task");
 
     res.json({ message: `Task with id ${req.params.id} DESTROYED!` });
@@ -179,6 +181,42 @@ const updateTask = async (req, res, next) => {
   }
 };
 
+const addImage = async (req, res, next) => {
+  try {
+    const task = await Task.findByPk(req.params.id);
+    if (!task) {
+      throw new ResourceNotFound("Task");
+    }
+
+    if (task.workerId !== req.user.id) {
+      throw new Forbidden();
+    }
+
+    const file = req.files.image;
+
+    if (!file) {
+      throw new InvalidRequest("Please upload an image file");
+    }
+
+    if (!file.mimetype.startsWith("image")) {
+      throw new UnsupportedFileType("Only image files accepted");
+    }
+
+    const extension = path.extname(file.name);
+    const newFileName = uuid() + extension;
+    const outputPath = path.join("uploads", newFileName);
+
+    file.mv(outputPath);
+
+    task.image = newFileName;
+    const response = await task.save();
+
+    res.json({ task: response });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createTask,
   getTasks,
@@ -187,4 +225,5 @@ module.exports = {
   getWorkerTasks,
   deleteTask,
   updateTask,
+  addImage,
 };

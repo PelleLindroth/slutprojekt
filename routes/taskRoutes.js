@@ -39,4 +39,11 @@ taskRoutes.patch(
   taskController.updateTask
 );
 
+taskRoutes.post(
+  "/tasks/:id/image",
+  authToken,
+  authRoles(["worker"]),
+  taskController.addImage
+);
+
 module.exports = taskRoutes;
