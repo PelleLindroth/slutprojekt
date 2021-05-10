@@ -11,6 +11,7 @@ const { Op, where } = require("sequelize");
 const User = require("../models/userModel");
 const Task = require("../models/taskModel");
 const Message = require("../models/messageModel");
+const taskRoutes = require("../routes/taskRoutes");
 
 const createTask = async (req, res, next) => {
   try {
@@ -136,10 +137,25 @@ const getWorkerTasks = async (req, res, next) => {
   }
 };
 
+const deleteTask = async (req, res, next) => {
+  try {
+    const task = await Task.destroy({ where: { id: req.params.id } })
+
+    // Check if related messages are deleted, else refactor
+    if (!task) throw new ResourceNotFound('Task')
+
+    res.json({ message: `Task with id ${req.params.id} DESTROYED!` })
+
+  } catch (error) {
+    next(error)
+  }
+}
+
 module.exports = {
   createTask,
   getTasks,
   getTasksById,
   getClientsTasks,
   getWorkerTasks,
+  deleteTask
 };

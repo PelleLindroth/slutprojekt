@@ -25,4 +25,11 @@ taskRoutes.get(
   taskController.getTasksById
 );
 
+taskRoutes.delete(
+  '/tasks/:id',
+  authToken,
+  authRoles(['admin']),
+  taskController.deleteTask
+);
+
 module.exports = taskRoutes;
