@@ -1,4 +1,4 @@
-class CustomError extends Error { }
+class CustomError extends Error {}
 
 class Forbidden extends CustomError {
   constructor() {
@@ -24,7 +24,6 @@ class InvalidCredentials extends CustomError {
   }
 }
 
-
 class MissingCredentials extends CustomError {
   constructor(...arr) {
     super();
@@ -33,11 +32,11 @@ class MissingCredentials extends CustomError {
   }
 }
 
-class InvalidQueryParams extends CustomError {
+class InvalidRequest extends CustomError {
   constructor(message) {
-    super()
+    super();
     this.errorCode = 400;
-    this.errorMessage = `Invalid query. ${message}.`
+    this.errorMessage = `Invalid request. ${message}.`;
   }
 }
 
@@ -89,7 +88,7 @@ module.exports = {
   InvalidCredentials,
   Unauthorized,
   InvalidBody,
-  InvalidQueryParams,
+  InvalidRequest,
   UnsupportedFileType,
   TokenExpired,
   MissingCredentials,

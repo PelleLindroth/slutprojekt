@@ -19,17 +19,24 @@ taskRoutes.get(
 );
 
 taskRoutes.get(
-  '/tasks/:id',
+  "/tasks/:id",
   authToken,
-  authRoles(['client', 'worker']),
+  authRoles(["client", "worker"]),
   taskController.getTasksById
 );
 
 taskRoutes.delete(
-  '/tasks/:id',
+  "/tasks/:id",
   authToken,
-  authRoles(['admin']),
+  authRoles(["admin"]),
   taskController.deleteTask
+);
+
+taskRoutes.patch(
+  "/tasks/:id",
+  authToken,
+  authRoles(["worker"]),
+  taskController.updateTask
 );
 
 module.exports = taskRoutes;

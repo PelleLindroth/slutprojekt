@@ -4,8 +4,8 @@ const {
   Teapot,
   Forbidden,
   InvalidCredentials,
-  InvalidQueryParams,
-  Unauthorized
+  InvalidRequest,
+  Unauthorized,
 } = require("../errors");
 const { Op, where } = require("sequelize");
 const User = require("../models/userModel");
@@ -33,29 +33,29 @@ const createTask = async (req, res, next) => {
 
 const getTasks = async (req, res, next) => {
   switch (req.user.role) {
-    case 'client':
-      getClientsTasks(req, res, next)
-      break
-    case 'worker':
-      getWorkerTasks(req, res, next)
-      break
+    case "client":
+      getClientsTasks(req, res, next);
+      break;
+    case "worker":
+      getWorkerTasks(req, res, next);
+      break;
   }
-}
+};
 
 const getTasksById = async (req, res, next) => {
   try {
-    const task = await Task.findByPk(req.params.id)
-    if (!task) throw new ResourceNotFound('Task')
+    const task = await Task.findByPk(req.params.id);
+    if (!task) throw new ResourceNotFound("Task");
 
-    if (req.user.role === 'client' && req.user.id !== task.clientId) {
-      throw new Unauthorized()
+    if (req.user.role === "client" && req.user.id !== task.clientId) {
+      throw new Unauthorized();
     }
 
-    res.json({ task })
+    res.json({ task });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
 
 const getClientsTasks = async (req, res, next) => {
   try {
@@ -64,7 +64,7 @@ const getClientsTasks = async (req, res, next) => {
     if (!clientTasks.length) {
       throw new ResourceNotFound("Tasks");
     }
-    res.json({ tasks: clientTasks })
+    res.json({ tasks: clientTasks });
   } catch (error) {
     next(error);
   }
@@ -91,8 +91,8 @@ const getWorkerTasks = async (req, res, next) => {
     }
 
     if (filter) {
-      if (filter !== 'done' && filter !== 'incomplete') {
-        throw new InvalidQueryParams('Valid filter params: done or incomplete')
+      if (filter !== "done" && filter !== "incomplete") {
+        throw new InvalidRequest("Valid filter params: done or incomplete");
       }
     }
 
@@ -139,17 +139,45 @@ const getWorkerTasks = async (req, res, next) => {
 
 const deleteTask = async (req, res, next) => {
   try {
-    const task = await Task.destroy({ where: { id: req.params.id } })
+    const task = await Task.destroy({ where: { id: req.params.id } });
 
     // Check if related messages are deleted, else refactor
-    if (!task) throw new ResourceNotFound('Task')
+    if (!task) throw new ResourceNotFound("Task");
 
-    res.json({ message: `Task with id ${req.params.id} DESTROYED!` })
-
+    res.json({ message: `Task with id ${req.params.id} DESTROYED!` });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
+
+const updateTask = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { title, done } = req.body;
+
+    if (done && done !== "true" && done !== "false") {
+      throw new InvalidRequest("Please mark done true or false");
+    }
+
+    const task = await Task.findByPk(id);
+
+    if (!task) {
+      throw new ResourceNotFound("Task");
+    }
+    if (req.user.id !== task.workerId) {
+      throw new Unauthorized();
+    }
+
+    title && (task.title = title);
+    done && (task.done = done);
+
+    const response = await task.save();
+
+    res.json({ task: response });
+  } catch (error) {
+    next(error);
+  }
+};
 
 module.exports = {
   createTask,
@@ -157,5 +185,6 @@ module.exports = {
   getTasksById,
   getClientsTasks,
   getWorkerTasks,
-  deleteTask
+  deleteTask,
+  updateTask,
 };
