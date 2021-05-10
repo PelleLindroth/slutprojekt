@@ -1,4 +1,4 @@
-class CustomError extends Error {}
+class CustomError extends Error { }
 
 class Forbidden extends CustomError {
   constructor() {
@@ -30,6 +30,14 @@ class MissingCredentials extends CustomError {
     super();
     this.errorCode = 400;
     this.errorMessage = `Missing credentials: ${arr.join(", ")} required`;
+  }
+}
+
+class InvalidQueryParams extends CustomError {
+  constructor(message) {
+    super()
+    this.errorCode = 400;
+    this.errorMessage = `Invalid query. ${message}.`
   }
 }
 
@@ -81,6 +89,7 @@ module.exports = {
   InvalidCredentials,
   Unauthorized,
   InvalidBody,
+  InvalidQueryParams,
   UnsupportedFileType,
   TokenExpired,
   MissingCredentials,
