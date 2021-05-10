@@ -3,6 +3,8 @@ const {
   ResourceNotFound,
   Teapot,
   Forbidden,
+  InvalidCredentials,
+  InvalidQueryParams
 } = require("../errors");
 const { Op, where } = require("sequelize");
 const User = require("../models/userModel");
@@ -27,20 +29,31 @@ const createTask = async (req, res, next) => {
   }
 };
 
-const getClientsTasks = async (req) => {
+const getTasks = async (req, res, next) => {
+  switch (req.user.role) {
+    case 'client':
+      getClientsTasks(req, res, next)
+      break
+    case 'worker':
+      getWorkerTasks(req, res, next)
+      break
+  }
+}
+
+const getClientsTasks = async (req, res, next) => {
   try {
     const clientId = req.user.id;
     const clientTasks = await Task.findAll({ where: { clientId } });
     if (!clientTasks.length) {
       throw new ResourceNotFound("Tasks");
     }
-    return { tasks: clientTasks };
+    res.json({ tasks: clientTasks })
   } catch (error) {
-    return error;
+    next(error);
   }
 };
 
-const getWorkerTasks = async (req) => {
+const getWorkerTasks = async (req, res, next) => {
   try {
     const workerId = req.user.id;
     const { filter, search } = req.query;
@@ -58,6 +71,12 @@ const getWorkerTasks = async (req) => {
         throw new ResourceNotFound("Clients");
       }
       clients = clients.map((client) => client.dataValues.id);
+    }
+
+    if (filter) {
+      if (filter !== 'done' && filter !== 'incomplete') {
+        throw new InvalidQueryParams('Valid filter params: done or incomplete')
+      }
     }
 
     if (!filter && !search) {
@@ -95,14 +114,15 @@ const getWorkerTasks = async (req) => {
     if (!workerTasks.length) {
       throw new ResourceNotFound("Tasks");
     }
-    return { tasks: workerTasks };
+    res.json({ tasks: workerTasks });
   } catch (error) {
-    return error;
+    next(error);
   }
 };
 
 module.exports = {
   createTask,
+  getTasks,
   getClientsTasks,
   getWorkerTasks,
 };
