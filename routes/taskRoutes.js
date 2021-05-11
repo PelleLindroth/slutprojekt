@@ -11,6 +11,20 @@ taskRoutes.post(
   taskController.createTask
 );
 
+taskRoutes.post(
+  "/tasks/:id/image",
+  authToken,
+  authRoles(["worker"]),
+  taskController.addImage
+);
+
+taskRoutes.post(
+  "/tasks/:id/messages",
+  authToken,
+  authRoles(["worker", "client"]),
+  taskController.addMessage
+);
+
 taskRoutes.get(
   "/tasks",
   authToken,
@@ -25,11 +39,11 @@ taskRoutes.get(
   taskController.getTasksById
 );
 
-taskRoutes.delete(
-  "/tasks/:id",
+taskRoutes.get(
+  "/tasks/:id/messages",
   authToken,
-  authRoles(["admin"]),
-  taskController.deleteTask
+  authRoles(["client", "worker"]),
+  taskController.getMessages
 );
 
 taskRoutes.patch(
@@ -39,11 +53,18 @@ taskRoutes.patch(
   taskController.updateTask
 );
 
-taskRoutes.post(
-  "/tasks/:id/image",
+taskRoutes.delete(
+  "/tasks/:id",
   authToken,
-  authRoles(["worker"]),
-  taskController.addImage
+  authRoles(["admin"]),
+  taskController.deleteTask
+);
+
+taskRoutes.delete(
+  "/messages/:id",
+  authToken,
+  authRoles(["client", "worker"]),
+  taskController.deleteMessage
 );
 
 module.exports = taskRoutes;

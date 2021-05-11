@@ -1,5 +1,5 @@
 const { MissingCredentials, ResourceNotFound, Teapot, Forbidden } = require("../errors");
-const { Op, where } = require("sequelize");
+const { Op } = require("sequelize");
 const User = require("../models/userModel");
 const Task = require("../models/taskModel");
 const bcrypt = require("bcryptjs");
@@ -82,23 +82,23 @@ const getUsers = async (req, res, next) => {
   }
 }
 
-const getById = async (req, res ,next) => {
-  try{
+const getById = async (req, res, next) => {
+  try {
 
     const id = req.params.id
-    const user = await User.findByPk(id, {attributes: {exclude: ['password', 'createdAt', 'updatedAt']}})
-    if(!user){
+    const user = await User.findByPk(id, { attributes: { exclude: ['password', 'createdAt', 'updatedAt'] } })
+    if (!user) {
       throw new ResourceNotFound('User')
     }
     res.json(user)
 
-  }catch(error){
+  } catch (error) {
     next(error)
   }
 }
 
 const updateUser = async (req, res, next) => {
-  try{
+  try {
     let id;
     if (req.body.password && !req.body.confirmPassword) {
       throw new MissingCredentials('confirmPassword')
@@ -108,16 +108,16 @@ const updateUser = async (req, res, next) => {
     }
     if (req.params.id && req.user.role === 'admin') {
       id = req.params.id
-    }else{
+    } else {
       id = req.user.id
-    } 
+    }
 
     const updates = Object.keys(req.body).reduce((updateObj, key) => {
       updateObj[key] = req.body[key]
       return updateObj
     }, {})
 
-    if(updates.password){
+    if (updates.password) {
       updates.password = bcrypt.hashSync(updates.password, 10)
     }
     if (updates.role && !req.params.id) {
@@ -127,28 +127,28 @@ const updateUser = async (req, res, next) => {
       throw new MissingCredentials(['Fields to update'])
     }
 
-    const response = await User.update(updates, {where: {id}} )
+    const response = await User.update(updates, { where: { id } })
     if (response[0] == 0) {
       throw new ResourceNotFound('User')
     }
-    res.json({message: 'success!'})
+    res.json({ message: `User with id ${id} updated` })
 
-  }catch(error){
+  } catch (error) {
     next(error)
   }
 }
 
-const deleteUser = async (req, res ,next) => {
+const deleteUser = async (req, res, next) => {
   try {
     const id = req.params.id
     if (req.user.id == id) {
       throw new Forbidden()
     }
-    const response = await User.destroy({where: {id}})
+    const response = await User.destroy({ where: { id } })
     if (!response) {
       throw new ResourceNotFound('User')
     }
-    res.json({message: 'User deleted successfully'})
+    res.json({ message: `User with id ${id} deleted successfully` })
   } catch (error) {
     next(error)
   }

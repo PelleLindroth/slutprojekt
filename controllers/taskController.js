@@ -1,20 +1,18 @@
 const {
   MissingCredentials,
   ResourceNotFound,
-  Teapot,
   Forbidden,
-  InvalidCredentials,
   InvalidRequest,
   Unauthorized,
   UnsupportedFileType,
 } = require("../errors");
-const { Op, where } = require("sequelize");
+const { Op } = require("sequelize");
 const User = require("../models/userModel");
 const Task = require("../models/taskModel");
 const Message = require("../models/messageModel");
-const taskRoutes = require("../routes/taskRoutes");
 const path = require("path");
 const { v4: uuid } = require("uuid");
+const fs = require("fs");
 
 const createTask = async (req, res, next) => {
   try {
@@ -42,21 +40,6 @@ const getTasks = async (req, res, next) => {
     case "worker":
       getWorkerTasks(req, res, next);
       break;
-  }
-};
-
-const getTasksById = async (req, res, next) => {
-  try {
-    const task = await Task.findByPk(req.params.id);
-    if (!task) throw new ResourceNotFound("Task");
-
-    if (req.user.role === "client" && req.user.id !== task.clientId) {
-      throw new Unauthorized();
-    }
-
-    res.json({ task });
-  } catch (error) {
-    next(error);
   }
 };
 
@@ -140,6 +123,22 @@ const getWorkerTasks = async (req, res, next) => {
   }
 };
 
+
+const getTasksById = async (req, res, next) => {
+  try {
+    const task = await Task.findByPk(req.params.id);
+    if (!task) throw new ResourceNotFound("Task");
+
+    if (req.user.role === "client" && req.user.id !== task.clientId) {
+      throw new Unauthorized();
+    }
+
+    res.json({ task });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const deleteTask = async (req, res, next) => {
   try {
     const task = await Task.destroy({ where: { id: req.params.id } });
@@ -202,6 +201,11 @@ const addImage = async (req, res, next) => {
       throw new UnsupportedFileType("Only image files accepted");
     }
 
+    if (task.image) {
+      const filePath = path.join("uploads", task.image);
+      fs.rmSync(filePath);
+    }
+
     const extension = path.extname(file.name);
     const newFileName = uuid() + extension;
     const outputPath = path.join("uploads", newFileName);
@@ -217,6 +221,92 @@ const addImage = async (req, res, next) => {
   }
 };
 
+const addMessage = async (req, res, next) => {
+  try {
+    const { content } = req.body;
+    if (!content) {
+      throw new InvalidBody(["content"]);
+    }
+    const UserId = +req.user.id;
+    const role = req.user.role;
+    const TaskId = +req.params.id;
+    const task = await Task.findByPk(TaskId);
+
+    if (
+      (role === "client" && task.clientId !== UserId) ||
+      (role === "worker" && task.workerId !== UserId)
+    ) {
+      throw new Forbidden();
+    }
+
+    const response = await Message.create({ content, UserId, TaskId });
+
+    res.json({ message: response });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getMessages = async (req, res, next) => {
+  try {
+    const TaskId = +req.params.id;
+    const userId = +req.user.id;
+    const role = req.user.role;
+    const per_page = req.query.per_page || 5;
+    const page = req.query.page || 1;
+    const offset = (page - 1) * per_page;
+    const task = await Task.findByPk(TaskId);
+
+    if (!task) {
+      throw new ResourceNotFound("Task");
+    }
+
+    if (
+      (role === "client" && task.clientId !== userId) ||
+      (role === "worker" && task.workerId !== userId)
+    ) {
+      throw new Forbidden();
+    }
+
+    const response = await Message.findAndCountAll({
+      where: { TaskId },
+      order: [["createdAt", "DESC"]],
+      limit: per_page,
+      offset: offset,
+    });
+
+    if (!response.rows.length) {
+      throw new ResourceNotFound("Messages");
+    }
+
+    res.json({ messages: response.rows, messageCount: response.count });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deleteMessage = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const UserId = req.user.id;
+
+    const message = await Message.findByPk(id);
+
+    if (!message) {
+      throw new ResourceNotFound("Message");
+    }
+    if (message.UserId !== UserId) {
+      throw new Forbidden();
+    }
+
+    await message.destroy();
+
+    res.json({ message: `Message with ID ${id} deleted successfully` });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createTask,
   getTasks,
@@ -226,4 +316,7 @@ module.exports = {
   deleteTask,
   updateTask,
   addImage,
+  addMessage,
+  getMessages,
+  deleteMessage,
 };
