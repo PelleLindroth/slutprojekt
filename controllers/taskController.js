@@ -1,18 +1,15 @@
 const {
   MissingCredentials,
   ResourceNotFound,
-  Teapot,
   Forbidden,
-  InvalidCredentials,
   InvalidRequest,
   Unauthorized,
   UnsupportedFileType,
 } = require("../errors");
-const { Op, where } = require("sequelize");
+const { Op } = require("sequelize");
 const User = require("../models/userModel");
 const Task = require("../models/taskModel");
 const Message = require("../models/messageModel");
-const taskRoutes = require("../routes/taskRoutes");
 const path = require("path");
 const { v4: uuid } = require("uuid");
 const fs = require("fs");
@@ -43,21 +40,6 @@ const getTasks = async (req, res, next) => {
     case "worker":
       getWorkerTasks(req, res, next);
       break;
-  }
-};
-
-const getTasksById = async (req, res, next) => {
-  try {
-    const task = await Task.findByPk(req.params.id);
-    if (!task) throw new ResourceNotFound("Task");
-
-    if (req.user.role === "client" && req.user.id !== task.clientId) {
-      throw new Unauthorized();
-    }
-
-    res.json({ task });
-  } catch (error) {
-    next(error);
   }
 };
 
@@ -141,6 +123,22 @@ const getWorkerTasks = async (req, res, next) => {
   }
 };
 
+
+const getTasksById = async (req, res, next) => {
+  try {
+    const task = await Task.findByPk(req.params.id);
+    if (!task) throw new ResourceNotFound("Task");
+
+    if (req.user.role === "client" && req.user.id !== task.clientId) {
+      throw new Unauthorized();
+    }
+
+    res.json({ task });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const deleteTask = async (req, res, next) => {
   try {
     const task = await Task.destroy({ where: { id: req.params.id } });
@@ -193,11 +191,6 @@ const addImage = async (req, res, next) => {
       throw new Forbidden();
     }
 
-    if (task.image) {
-      const filePath = path.join("uploads", task.image);
-      fs.rmSync(filePath);
-    }
-
     const file = req.files.image;
 
     if (!file) {
@@ -206,6 +199,11 @@ const addImage = async (req, res, next) => {
 
     if (!file.mimetype.startsWith("image")) {
       throw new UnsupportedFileType("Only image files accepted");
+    }
+
+    if (task.image) {
+      const filePath = path.join("uploads", task.image);
+      fs.rmSync(filePath);
     }
 
     const extension = path.extname(file.name);

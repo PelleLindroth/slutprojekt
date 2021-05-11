@@ -11,34 +11,6 @@ taskRoutes.post(
   taskController.createTask
 );
 
-taskRoutes.get(
-  "/tasks",
-  authToken,
-  authRoles(["client", "worker"]),
-  taskController.getTasks
-);
-
-taskRoutes.get(
-  "/tasks/:id",
-  authToken,
-  authRoles(["client", "worker"]),
-  taskController.getTasksById
-);
-
-taskRoutes.delete(
-  "/tasks/:id",
-  authToken,
-  authRoles(["admin"]),
-  taskController.deleteTask
-);
-
-taskRoutes.patch(
-  "/tasks/:id",
-  authToken,
-  authRoles(["worker"]),
-  taskController.updateTask
-);
-
 taskRoutes.post(
   "/tasks/:id/image",
   authToken,
@@ -54,10 +26,38 @@ taskRoutes.post(
 );
 
 taskRoutes.get(
+  "/tasks",
+  authToken,
+  authRoles(["client", "worker"]),
+  taskController.getTasks
+);
+
+taskRoutes.get(
+  "/tasks/:id",
+  authToken,
+  authRoles(["client", "worker"]),
+  taskController.getTasksById
+);
+
+taskRoutes.get(
   "/tasks/:id/messages",
   authToken,
   authRoles(["client", "worker"]),
   taskController.getMessages
+);
+
+taskRoutes.patch(
+  "/tasks/:id",
+  authToken,
+  authRoles(["worker"]),
+  taskController.updateTask
+);
+
+taskRoutes.delete(
+  "/tasks/:id",
+  authToken,
+  authRoles(["admin"]),
+  taskController.deleteTask
 );
 
 taskRoutes.delete(
