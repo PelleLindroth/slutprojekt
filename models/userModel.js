@@ -32,9 +32,8 @@ const User = db.define("User", {
   },
 });
 
-User.belongsToMany(Task, { through: Message });
-Task.belongsToMany(User, { through: Message });
-
+User.belongsToMany(Task, { through: { model: Message, unique: false } });
+Task.belongsToMany(User, { through: { model: Message, unique: false } });
 
 User.beforeCreate((user) => {
   user.password = bcrypt.hashSync(user.password, 10)
