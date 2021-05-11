@@ -53,7 +53,7 @@ User.authenticate = async ({ email, password }) => {
   }
 
   const payload = { email, id: user.id, role: user.role }
-  const token = jwt.sign(payload, process.env.JWT_SECRET)
+  const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' })
 
   return {
     id: user.id,
