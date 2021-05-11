@@ -287,6 +287,28 @@ const getMessages = async (req, res, next) => {
   }
 };
 
+const deleteMessage = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const UserId = req.user.id;
+
+    const message = await Message.findByPk(id);
+
+    if (!message) {
+      throw new ResourceNotFound("Message");
+    }
+    if (message.UserId !== UserId) {
+      throw new Forbidden();
+    }
+
+    await message.destroy();
+
+    res.json({ message: `Message with ID ${id} deleted successfully` });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createTask,
   getTasks,
@@ -298,4 +320,5 @@ module.exports = {
   addImage,
   addMessage,
   getMessages,
+  deleteMessage,
 };

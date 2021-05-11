@@ -60,4 +60,11 @@ taskRoutes.get(
   taskController.getMessages
 );
 
+taskRoutes.delete(
+  "/messages/:id",
+  authToken,
+  authRoles(["client", "worker"]),
+  taskController.deleteMessage
+);
+
 module.exports = taskRoutes;
