@@ -15,7 +15,7 @@ const Message = require("../models/messageModel");
 const taskRoutes = require("../routes/taskRoutes");
 const path = require("path");
 const { v4: uuid } = require("uuid");
-const fs = require('fs')
+const fs = require("fs");
 
 const createTask = async (req, res, next) => {
   try {
@@ -194,8 +194,8 @@ const addImage = async (req, res, next) => {
     }
 
     if (task.image) {
-      const filePath = path.join('uploads', task.image)
-      fs.rmSync(filePath)
+      const filePath = path.join("uploads", task.image);
+      fs.rmSync(filePath);
     }
 
     const file = req.files.image;
@@ -225,26 +225,67 @@ const addImage = async (req, res, next) => {
 
 const addMessage = async (req, res, next) => {
   try {
-    const { content } = req.body
+    const { content } = req.body;
     if (!content) {
-      throw new InvalidBody(['content'])
+      throw new InvalidBody(["content"]);
     }
-    const UserId = +req.user.id
-    const role = req.user.role
-    const TaskId = +req.params.id
-    const task = await Task.findByPk(TaskId)
+    const UserId = +req.user.id;
+    const role = req.user.role;
+    const TaskId = +req.params.id;
+    const task = await Task.findByPk(TaskId);
 
-    if ((role === 'client' && task.clientId !== UserId) || (role === 'worker' && task.workerId !== UserId)) {
-      throw new Forbidden()
+    if (
+      (role === "client" && task.clientId !== UserId) ||
+      (role === "worker" && task.workerId !== UserId)
+    ) {
+      throw new Forbidden();
     }
 
-    const response = await Message.create({ content, UserId, TaskId })
+    const response = await Message.create({ content, UserId, TaskId });
 
-    res.json({ message: response })
+    res.json({ message: response });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
+
+const getMessages = async (req, res, next) => {
+  try {
+    const TaskId = +req.params.id;
+    const userId = +req.user.id;
+    const role = req.user.role;
+    const per_page = req.query.per_page || 5;
+    const page = req.query.page || 1;
+    const offset = (page - 1) * per_page;
+    const task = await Task.findByPk(TaskId);
+
+    if (!task) {
+      throw new ResourceNotFound("Task");
+    }
+
+    if (
+      (role === "client" && task.clientId !== userId) ||
+      (role === "worker" && task.workerId !== userId)
+    ) {
+      throw new Forbidden();
+    }
+
+    const response = await Message.findAndCountAll({
+      where: { TaskId },
+      order: [["createdAt", "DESC"]],
+      limit: per_page,
+      offset: offset,
+    });
+
+    if (!response.rows.length) {
+      throw new ResourceNotFound("Messages");
+    }
+
+    res.json({ messages: response.rows, messageCount: response.count });
+  } catch (error) {
+    next(error);
+  }
+};
 
 module.exports = {
   createTask,
@@ -255,5 +296,6 @@ module.exports = {
   deleteTask,
   updateTask,
   addImage,
-  addMessage
+  addMessage,
+  getMessages,
 };

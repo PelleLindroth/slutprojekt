@@ -53,4 +53,11 @@ taskRoutes.post(
   taskController.addMessage
 );
 
+taskRoutes.get(
+  "/tasks/:id/messages",
+  authToken,
+  authRoles(["client", "worker"]),
+  taskController.getMessages
+);
+
 module.exports = taskRoutes;
