@@ -46,4 +46,11 @@ taskRoutes.post(
   taskController.addImage
 );
 
+taskRoutes.post(
+  "/tasks/:id/messages",
+  authToken,
+  authRoles(["worker", "client"]),
+  taskController.addMessage
+);
+
 module.exports = taskRoutes;

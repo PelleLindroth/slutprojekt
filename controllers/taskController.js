@@ -223,6 +223,29 @@ const addImage = async (req, res, next) => {
   }
 };
 
+const addMessage = async (req, res, next) => {
+  try {
+    const { content } = req.body
+    if (!content) {
+      throw new InvalidBody(['content'])
+    }
+    const UserId = +req.user.id
+    const role = req.user.role
+    const TaskId = +req.params.id
+    const task = await Task.findByPk(TaskId)
+
+    if ((role === 'client' && task.clientId !== UserId) || (role === 'worker' && task.workerId !== UserId)) {
+      throw new Forbidden()
+    }
+
+    const response = await Message.create({ content, UserId, TaskId })
+
+    res.json({ message: response })
+  } catch (error) {
+    next(error)
+  }
+}
+
 module.exports = {
   createTask,
   getTasks,
@@ -232,4 +255,5 @@ module.exports = {
   deleteTask,
   updateTask,
   addImage,
+  addMessage
 };
