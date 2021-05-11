@@ -15,6 +15,7 @@ const Message = require("../models/messageModel");
 const taskRoutes = require("../routes/taskRoutes");
 const path = require("path");
 const { v4: uuid } = require("uuid");
+const fs = require('fs')
 
 const createTask = async (req, res, next) => {
   try {
@@ -190,6 +191,11 @@ const addImage = async (req, res, next) => {
 
     if (task.workerId !== req.user.id) {
       throw new Forbidden();
+    }
+
+    if (task.image) {
+      const filePath = path.join('uploads', task.image)
+      fs.rmSync(filePath)
     }
 
     const file = req.files.image;
