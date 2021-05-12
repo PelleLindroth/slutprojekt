@@ -19,6 +19,20 @@ taskRoutes.post(
 );
 
 taskRoutes.post(
+  "/tasks/:id/error",
+  authToken,
+  authRoles(["client"]),
+  taskController.addErrorReport
+);
+
+taskRoutes.post(
+  "/errors/:id/image",
+  authToken,
+  authRoles(["client"]),
+  taskController.addImageToErrorReport
+);
+
+taskRoutes.post(
   "/tasks/:id/messages",
   authToken,
   authRoles(["worker", "client"]),

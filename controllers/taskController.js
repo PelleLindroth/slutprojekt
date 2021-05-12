@@ -11,6 +11,7 @@ const User = require("../models/userModel");
 const Task = require("../models/taskModel");
 const Message = require("../models/messageModel");
 const Image = require("../models/imageModel");
+const ErrorReport = require("../models/errorReportModel");
 const path = require("path");
 const { v4: uuid } = require("uuid");
 const fs = require("fs");
@@ -166,7 +167,7 @@ const deleteTask = async (req, res, next) => {
     const images = await Image.findAll({ where: { TaskId: null } });
 
     for (let image of images) {
-      const filePath = path.join("uploads", image.title);
+      const filePath = path.join("taskUploads", image.title);
       fs.unlinkSync(filePath);
       await image.destroy();
     }
@@ -229,7 +230,7 @@ const addImage = async (req, res, next) => {
 
     const extension = path.extname(file.name);
     const newFileName = uuid() + extension;
-    const outputPath = path.join("uploads", newFileName);
+    const outputPath = path.join("taskUploads", newFileName);
 
     file.mv(outputPath);
 
@@ -259,7 +260,7 @@ const deleteImage = async (req, res, next) => {
 
     await image.destroy();
 
-    const filePath = path.join("uploads", image.title);
+    const filePath = path.join("taskUploads", image.title);
     fs.unlinkSync(filePath);
 
     res.json({ message: `image with id: ${id} deleted.` });
@@ -354,6 +355,66 @@ const deleteMessage = async (req, res, next) => {
   }
 };
 
+const addErrorReport = async (req, res, next) => {
+  try {
+    const taskId = req.params.id;
+    const { content } = req.body;
+
+    const task = await Task.findByPk(taskId);
+    if (!task) {
+      throw new ResourceNotFound("Task");
+    }
+    if (req.user.id !== task.clientId) {
+      throw new Forbidden();
+    }
+
+    const response = await task.createErrorReport({ content });
+
+    res.json({ response });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const addImageToErrorReport = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const errorReport = await ErrorReport.findByPk(id);
+
+    if (!errorReport) {
+      throw new ResourceNotFound("Error Report");
+    }
+
+    const task = await Task.findByPk(errorReport.TaskId);
+
+    if (task.clientId !== req.user.id) {
+      throw new Forbidden();
+    }
+
+    const file = req.files.image;
+
+    if (!file) {
+      throw new InvalidRequest("Please upload an image file");
+    }
+
+    if (!file.mimetype.startsWith("image")) {
+      throw new UnsupportedFileType("Only image files accepted");
+    }
+
+    const extension = path.extname(file.name);
+    const newFileName = uuid() + extension;
+    const outputPath = path.join("errorUploads", newFileName);
+
+    file.mv(outputPath);
+
+    errorReport.image = newFileName;
+    const response = await errorReport.save();
+    console.log(response);
+    res.json({ response });
+  } catch (error) {
+    next(error);
+  }
+};
 module.exports = {
   createTask,
   getTasks,
@@ -367,4 +428,6 @@ module.exports = {
   addMessage,
   getMessages,
   deleteMessage,
+  addErrorReport,
+  addImageToErrorReport,
 };

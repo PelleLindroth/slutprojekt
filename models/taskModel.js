@@ -1,6 +1,7 @@
 const db = require("../database/connection");
 const { DataTypes } = require("sequelize");
-const Image = require('./imageModel')
+const Image = require("./imageModel");
+const ErrorReport = require("./errorReportModel");
 
 const Task = db.define(
   "Task",
@@ -15,19 +16,22 @@ const Task = db.define(
     },
     clientId: {
       type: DataTypes.NUMBER,
-      allowNull: false
+      allowNull: false,
     },
     workerId: {
       type: DataTypes.NUMBER,
-      allowNull: false
-    }
+      allowNull: false,
+    },
   },
   {
     timestamps: true,
   }
 );
 
-Task.hasMany(Image)
-Image.belongsTo(Task)
+Task.hasMany(Image);
+Image.belongsTo(Task);
+
+Task.hasMany(ErrorReport);
+ErrorReport.belongsTo(Task);
 
 module.exports = Task;
