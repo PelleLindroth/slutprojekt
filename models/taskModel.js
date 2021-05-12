@@ -1,5 +1,6 @@
 const db = require("../database/connection");
 const { DataTypes } = require("sequelize");
+const Image = require('./imageModel')
 
 const Task = db.define(
   "Task",
@@ -7,9 +8,6 @@ const Task = db.define(
     title: {
       type: DataTypes.STRING,
       defaultValue: "Untitled task",
-    },
-    image: {
-      type: DataTypes.STRING,
     },
     done: {
       type: DataTypes.BOOLEAN,
@@ -28,5 +26,8 @@ const Task = db.define(
     timestamps: true,
   }
 );
+
+Task.hasMany(Image)
+Image.belongsTo(Task)
 
 module.exports = Task;

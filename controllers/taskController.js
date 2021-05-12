@@ -10,9 +10,11 @@ const { Op } = require("sequelize");
 const User = require("../models/userModel");
 const Task = require("../models/taskModel");
 const Message = require("../models/messageModel");
+const Image = require("../models/imageModel");
 const path = require("path");
 const { v4: uuid } = require("uuid");
 const fs = require("fs");
+
 
 const createTask = async (req, res, next) => {
   try {
@@ -46,7 +48,7 @@ const getTasks = async (req, res, next) => {
 const getClientsTasks = async (req, res, next) => {
   try {
     const clientId = req.user.id;
-    const clientTasks = await Task.findAll({ where: { clientId } });
+    const clientTasks = await Task.findAll({ where: { clientId }, include: {model:Image, attributes: {exclude:["createdAt", "updatedAt", "TaskId"]}} });
     if (!clientTasks.length) {
       throw new ResourceNotFound("Tasks");
     }
@@ -62,11 +64,11 @@ const getWorkerTasks = async (req, res, next) => {
     const { filter, search } = req.query;
     let filterObject = {};
     let clients;
+    let includeImage = {model:Image, attributes: {exclude:["createdAt", "updatedAt", "TaskId"]}}
 
     if (search) {
       clients = await User.findAll({
         where: { name: { [Op.substring]: search }, role: "client" },
-
         attributes: { exclude: ["password", "createdAt", "updatedAt"] },
       });
 
@@ -83,10 +85,11 @@ const getWorkerTasks = async (req, res, next) => {
     }
 
     if (!filter && !search) {
-      filterObject = { where: { workerId } };
+      filterObject = { where: { workerId }, include: includeImage };
     } else if (filter && !search) {
       filterObject = {
         where: { workerId, done: filter === "done" ? true : false },
+        include: includeImage
       };
     } else if (!filter && search) {
       filterObject = {
@@ -94,6 +97,7 @@ const getWorkerTasks = async (req, res, next) => {
           workerId,
           clientId: clients,
         },
+        include: includeImage
       };
     } else if (filter && search) {
       filterObject = {
@@ -102,6 +106,7 @@ const getWorkerTasks = async (req, res, next) => {
           clientId: clients,
           done: filter === "done" ? true : false,
         },
+        include: includeImage
       };
     } else {
       filterObject = {
@@ -109,6 +114,7 @@ const getWorkerTasks = async (req, res, next) => {
           workerId,
           clientId: clients,
         },
+        include: includeImage
       };
     }
 
@@ -126,7 +132,9 @@ const getWorkerTasks = async (req, res, next) => {
 
 const getTasksById = async (req, res, next) => {
   try {
-    const task = await Task.findByPk(req.params.id);
+    let includeImage = {model:Image, attributes: {exclude:["createdAt", "updatedAt", "TaskId"]}}
+    const task = await Task.findByPk(req.params.id, {include: includeImage});
+
     if (!task) throw new ResourceNotFound("Task");
 
     if (req.user.role === "client" && req.user.id !== task.clientId) {
@@ -201,10 +209,10 @@ const addImage = async (req, res, next) => {
       throw new UnsupportedFileType("Only image files accepted");
     }
 
-    if (task.image) {
-      const filePath = path.join("uploads", task.image);
-      fs.rmSync(filePath);
-    }
+    // if (task.image) {
+    //   const filePath = path.join("uploads", task.image);
+    //   fs.rmSync(filePath);
+    // }
 
     const extension = path.extname(file.name);
     const newFileName = uuid() + extension;
@@ -212,10 +220,10 @@ const addImage = async (req, res, next) => {
 
     file.mv(outputPath);
 
-    task.image = newFileName;
-    const response = await task.save();
+    const image = await Image.create({title: newFileName, TaskId: task.id})
 
-    res.json({ task: response });
+    res.json( {image} )
+
   } catch (error) {
     next(error);
   }
