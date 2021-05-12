@@ -51,10 +51,16 @@ const getClientsTasks = async (req, res, next) => {
     const clientId = req.user.id;
     const clientTasks = await Task.findAll({
       where: { clientId },
-      include: {
-        model: Image,
-        attributes: { exclude: ["createdAt", "updatedAt", "TaskId"] },
-      },
+      include: [
+        {
+          model: Image,
+          attributes: { exclude: ["createdAt", "updatedAt", "TaskId"] },
+        },
+        {
+          model: ErrorReport,
+          attributes: { exclude: ["updatedAt", "TaskId"] },
+        },
+      ],
     });
     if (!clientTasks.length) {
       throw new ResourceNotFound("Tasks");
@@ -71,10 +77,16 @@ const getWorkerTasks = async (req, res, next) => {
     const { filter, search } = req.query;
     let filterObject = {};
     let clients;
-    let includeImage = {
-      model: Image,
-      attributes: { exclude: ["createdAt", "updatedAt", "TaskId"] },
-    };
+    let include = [
+      {
+        model: Image,
+        attributes: { exclude: ["createdAt", "updatedAt", "TaskId"] },
+      },
+      {
+        model: ErrorReport,
+        attributes: { exclude: ["updatedAt", "TaskId"] },
+      },
+    ];
 
     if (search) {
       clients = await User.findAll({
@@ -95,11 +107,11 @@ const getWorkerTasks = async (req, res, next) => {
     }
 
     if (!filter && !search) {
-      filterObject = { where: { workerId }, include: includeImage };
+      filterObject = { where: { workerId }, include };
     } else if (filter && !search) {
       filterObject = {
         where: { workerId, done: filter === "done" ? true : false },
-        include: includeImage,
+        include,
       };
     } else if (!filter && search) {
       filterObject = {
@@ -107,7 +119,7 @@ const getWorkerTasks = async (req, res, next) => {
           workerId,
           clientId: clients,
         },
-        include: includeImage,
+        include,
       };
     } else if (filter && search) {
       filterObject = {
@@ -116,7 +128,7 @@ const getWorkerTasks = async (req, res, next) => {
           clientId: clients,
           done: filter === "done" ? true : false,
         },
-        include: includeImage,
+        include,
       };
     } else {
       filterObject = {
@@ -124,7 +136,7 @@ const getWorkerTasks = async (req, res, next) => {
           workerId,
           clientId: clients,
         },
-        include: includeImage,
+        include,
       };
     }
 
@@ -141,11 +153,17 @@ const getWorkerTasks = async (req, res, next) => {
 
 const getTasksById = async (req, res, next) => {
   try {
-    let includeImage = {
-      model: Image,
-      attributes: { exclude: ["createdAt", "updatedAt", "TaskId"] },
-    };
-    const task = await Task.findByPk(req.params.id, { include: includeImage });
+    let include = [
+      {
+        model: Image,
+        attributes: { exclude: ["createdAt", "updatedAt", "TaskId"] },
+      },
+      {
+        model: ErrorReport,
+        attributes: { exclude: ["updatedAt", "TaskId"] },
+      },
+    ];
+    const task = await Task.findByPk(req.params.id, { include });
 
     if (!task) throw new ResourceNotFound("Task");
 
@@ -170,6 +188,14 @@ const deleteTask = async (req, res, next) => {
       const filePath = path.join("taskUploads", image.title);
       fs.unlinkSync(filePath);
       await image.destroy();
+    }
+
+    const errorReports = await ErrorReport.findAll({ where: { TaskId: null } });
+
+    for (let report of errorReports) {
+      const filePath = path.join("errorUploads", report.image);
+      fs.unlinkSync(filePath);
+      await report.destroy();
     }
 
     res.json({ message: `Task with id ${req.params.id} DESTROYED!` });
