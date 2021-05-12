@@ -5,6 +5,7 @@ const {
   InvalidRequest,
   Unauthorized,
   UnsupportedFileType,
+  InvalidBody,
 } = require("../errors");
 const { Op } = require("sequelize");
 const User = require("../models/userModel");
@@ -12,10 +13,10 @@ const Task = require("../models/taskModel");
 const Message = require("../models/messageModel");
 const Image = require("../models/imageModel");
 const ErrorReport = require("../models/errorReportModel");
+const Review = require("../models/reviewModel");
 const path = require("path");
 const { v4: uuid } = require("uuid");
 const fs = require("fs");
-const { findAll } = require("../models/imageModel");
 
 const createTask = async (req, res, next) => {
   try {
@@ -60,6 +61,10 @@ const getClientsTasks = async (req, res, next) => {
           model: ErrorReport,
           attributes: { exclude: ["updatedAt", "TaskId"] },
         },
+        {
+          model: Review,
+          attributes: { exclude: ["updatedAt", "TaskId"] },
+        }
       ],
     });
     if (!clientTasks.length) {
@@ -86,6 +91,10 @@ const getWorkerTasks = async (req, res, next) => {
         model: ErrorReport,
         attributes: { exclude: ["updatedAt", "TaskId"] },
       },
+      {
+        model: Review,
+        attributes: { exclude: ["updatedAt", "TaskId"] },
+      }
     ];
 
     if (search) {
@@ -162,6 +171,10 @@ const getTasksById = async (req, res, next) => {
         model: ErrorReport,
         attributes: { exclude: ["updatedAt", "TaskId"] },
       },
+      {
+        model: Review,
+        attributes: { exclude: ["updatedAt", "TaskId"] },
+      }
     ];
     const task = await Task.findByPk(req.params.id, { include });
 
@@ -176,6 +189,20 @@ const getTasksById = async (req, res, next) => {
     next(error);
   }
 };
+
+const getReviews = async (req, res, next) => {
+  try {
+    const response = await Review.findAndCountAll()
+
+    if (!response.count) {
+      throw new ResourceNotFound('Reviews')
+    }
+
+    res.json({ count: response.count, reviews: response.rows })
+  } catch (error) {
+    next(error)
+  }
+}
 
 const deleteTask = async (req, res, next) => {
   try {
@@ -197,6 +224,8 @@ const deleteTask = async (req, res, next) => {
       fs.unlinkSync(filePath);
       await report.destroy();
     }
+
+    await Review.destroy({ where: { TaskId: null } })
 
     res.json({ message: `Task with id ${req.params.id} DESTROYED!` });
   } catch (error) {
@@ -268,6 +297,34 @@ const addImage = async (req, res, next) => {
     next(error);
   }
 };
+
+const addReview = async (req, res, next) => {
+  try {
+    const { content, rating } = req.body;
+    const { id } = req.params
+    if (!content || !rating) {
+      throw new InvalidBody(['content', 'rating'])
+    };
+    const task = await Task.findByPk(id);
+
+    if (!task) {
+      throw new ResourceNotFound('Task');
+    };
+    if (task.Review !== null) {
+      await Review.destroy({ where: { TaskId: task.id } })
+    }
+    if (task.clientId !== req.user.id) {
+      throw new Forbidden();
+    };
+
+    const response = await task.createReview({ content, rating: +rating });
+
+    res.json({ response })
+
+  } catch (error) {
+    next(error)
+  }
+}
 
 const deleteImage = async (req, res, next) => {
   try {
@@ -447,10 +504,12 @@ module.exports = {
   getTasksById,
   getClientsTasks,
   getWorkerTasks,
+  getReviews,
   deleteTask,
   updateTask,
   addImage,
   deleteImage,
+  addReview,
   addMessage,
   getMessages,
   deleteMessage,

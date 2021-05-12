@@ -2,6 +2,7 @@ const db = require("../database/connection");
 const { DataTypes } = require("sequelize");
 const Image = require("./imageModel");
 const ErrorReport = require("./errorReportModel");
+const Review = require("./reviewModel");
 
 const Task = db.define(
   "Task",
@@ -33,5 +34,8 @@ Image.belongsTo(Task);
 
 Task.hasMany(ErrorReport);
 ErrorReport.belongsTo(Task);
+
+Task.hasOne(Review, { unique: true });
+Review.belongsTo(Task, { unique: true });
 
 module.exports = Task;

@@ -39,6 +39,13 @@ taskRoutes.post(
   taskController.addMessage
 );
 
+taskRoutes.post(
+  "/tasks/:id/review",
+  authToken,
+  authRoles(["client"]),
+  taskController.addReview
+);
+
 taskRoutes.get(
   "/tasks",
   authToken,
@@ -59,6 +66,8 @@ taskRoutes.get(
   authRoles(["client", "worker"]),
   taskController.getMessages
 );
+
+taskRoutes.get('/reviews', authToken, authRoles(['admin']), taskController.getReviews)
 
 taskRoutes.patch(
   "/tasks/:id",
