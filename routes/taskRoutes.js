@@ -61,6 +61,13 @@ taskRoutes.delete(
 );
 
 taskRoutes.delete(
+  "/images/:id",
+  authToken,
+  authRoles(["worker"]),
+  taskController.deleteImage
+);
+
+taskRoutes.delete(
   "/messages/:id",
   authToken,
   authRoles(["client", "worker"]),

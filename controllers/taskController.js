@@ -14,6 +14,7 @@ const Image = require("../models/imageModel");
 const path = require("path");
 const { v4: uuid } = require("uuid");
 const fs = require("fs");
+const { findAll } = require("../models/imageModel");
 
 
 const createTask = async (req, res, next) => {
@@ -209,11 +210,6 @@ const addImage = async (req, res, next) => {
       throw new UnsupportedFileType("Only image files accepted");
     }
 
-    // if (task.image) {
-    //   const filePath = path.join("uploads", task.image);
-    //   fs.rmSync(filePath);
-    // }
-
     const extension = path.extname(file.name);
     const newFileName = uuid() + extension;
     const outputPath = path.join("uploads", newFileName);
@@ -228,6 +224,32 @@ const addImage = async (req, res, next) => {
     next(error);
   }
 };
+
+const deleteImage = async (req, res, next) => {
+  try {
+    const id = req.params.id
+    
+    const image = await Image.findByPk(id)
+    
+    if(!image){
+      throw new ResourceNotFound('Image')
+    }
+    const task = await Task.findByPk(image.TaskId)
+
+    if (req.user.id != task.workerId) {
+      throw new Forbidden()
+    }
+
+    await image.destroy()
+
+    const filePath = path.join("uploads", image.title);
+    fs.unlinkSync(filePath);
+        
+    res.json({message: `image with id: ${id} deleted.`})
+  } catch (error) {
+    next(error)
+  }
+}
 
 const addMessage = async (req, res, next) => {
   try {
@@ -324,6 +346,7 @@ module.exports = {
   deleteTask,
   updateTask,
   addImage,
+  deleteImage,
   addMessage,
   getMessages,
   deleteMessage,
