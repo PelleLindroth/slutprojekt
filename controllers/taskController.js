@@ -5,11 +5,15 @@ const {
   InvalidRequest,
   Unauthorized,
   UnsupportedFileType,
+  InvalidBody,
 } = require("../errors");
 const { Op } = require("sequelize");
 const User = require("../models/userModel");
 const Task = require("../models/taskModel");
 const Message = require("../models/messageModel");
+const Image = require("../models/imageModel");
+const ErrorReport = require("../models/errorReportModel");
+const Review = require("../models/reviewModel");
 const path = require("path");
 const { v4: uuid } = require("uuid");
 const fs = require("fs");
@@ -46,7 +50,23 @@ const getTasks = async (req, res, next) => {
 const getClientsTasks = async (req, res, next) => {
   try {
     const clientId = req.user.id;
-    const clientTasks = await Task.findAll({ where: { clientId } });
+    const clientTasks = await Task.findAll({
+      where: { clientId },
+      include: [
+        {
+          model: Image,
+          attributes: { exclude: ["createdAt", "updatedAt", "TaskId"] },
+        },
+        {
+          model: ErrorReport,
+          attributes: { exclude: ["updatedAt", "TaskId"] },
+        },
+        {
+          model: Review,
+          attributes: { exclude: ["updatedAt", "TaskId"] },
+        }
+      ],
+    });
     if (!clientTasks.length) {
       throw new ResourceNotFound("Tasks");
     }
@@ -62,11 +82,24 @@ const getWorkerTasks = async (req, res, next) => {
     const { filter, search } = req.query;
     let filterObject = {};
     let clients;
+    let include = [
+      {
+        model: Image,
+        attributes: { exclude: ["createdAt", "updatedAt", "TaskId"] },
+      },
+      {
+        model: ErrorReport,
+        attributes: { exclude: ["updatedAt", "TaskId"] },
+      },
+      {
+        model: Review,
+        attributes: { exclude: ["updatedAt", "TaskId"] },
+      }
+    ];
 
     if (search) {
       clients = await User.findAll({
         where: { name: { [Op.substring]: search }, role: "client" },
-
         attributes: { exclude: ["password", "createdAt", "updatedAt"] },
       });
 
@@ -83,10 +116,11 @@ const getWorkerTasks = async (req, res, next) => {
     }
 
     if (!filter && !search) {
-      filterObject = { where: { workerId } };
+      filterObject = { where: { workerId }, include };
     } else if (filter && !search) {
       filterObject = {
         where: { workerId, done: filter === "done" ? true : false },
+        include,
       };
     } else if (!filter && search) {
       filterObject = {
@@ -94,6 +128,7 @@ const getWorkerTasks = async (req, res, next) => {
           workerId,
           clientId: clients,
         },
+        include,
       };
     } else if (filter && search) {
       filterObject = {
@@ -102,6 +137,7 @@ const getWorkerTasks = async (req, res, next) => {
           clientId: clients,
           done: filter === "done" ? true : false,
         },
+        include,
       };
     } else {
       filterObject = {
@@ -109,6 +145,7 @@ const getWorkerTasks = async (req, res, next) => {
           workerId,
           clientId: clients,
         },
+        include,
       };
     }
 
@@ -123,10 +160,24 @@ const getWorkerTasks = async (req, res, next) => {
   }
 };
 
-
 const getTasksById = async (req, res, next) => {
   try {
-    const task = await Task.findByPk(req.params.id);
+    let include = [
+      {
+        model: Image,
+        attributes: { exclude: ["createdAt", "updatedAt", "TaskId"] },
+      },
+      {
+        model: ErrorReport,
+        attributes: { exclude: ["updatedAt", "TaskId"] },
+      },
+      {
+        model: Review,
+        attributes: { exclude: ["updatedAt", "TaskId"] },
+      }
+    ];
+    const task = await Task.findByPk(req.params.id, { include });
+
     if (!task) throw new ResourceNotFound("Task");
 
     if (req.user.role === "client" && req.user.id !== task.clientId) {
@@ -139,11 +190,42 @@ const getTasksById = async (req, res, next) => {
   }
 };
 
+const getReviews = async (req, res, next) => {
+  try {
+    const response = await Review.findAndCountAll()
+
+    if (!response.count) {
+      throw new ResourceNotFound('Reviews')
+    }
+
+    res.json({ count: response.count, reviews: response.rows })
+  } catch (error) {
+    next(error)
+  }
+}
+
 const deleteTask = async (req, res, next) => {
   try {
     const task = await Task.destroy({ where: { id: req.params.id } });
 
     if (!task) throw new ResourceNotFound("Task");
+    const images = await Image.findAll({ where: { TaskId: null } });
+
+    for (let image of images) {
+      const filePath = path.join("taskUploads", image.title);
+      fs.unlinkSync(filePath);
+      await image.destroy();
+    }
+
+    const errorReports = await ErrorReport.findAll({ where: { TaskId: null } });
+
+    for (let report of errorReports) {
+      const filePath = path.join("errorUploads", report.image);
+      fs.unlinkSync(filePath);
+      await report.destroy();
+    }
+
+    await Review.destroy({ where: { TaskId: null } })
 
     res.json({ message: `Task with id ${req.params.id} DESTROYED!` });
   } catch (error) {
@@ -201,21 +283,70 @@ const addImage = async (req, res, next) => {
       throw new UnsupportedFileType("Only image files accepted");
     }
 
-    if (task.image) {
-      const filePath = path.join("uploads", task.image);
-      fs.rmSync(filePath);
-    }
-
     const extension = path.extname(file.name);
     const newFileName = uuid() + extension;
-    const outputPath = path.join("uploads", newFileName);
+    const outputPath = path.join("taskUploads", newFileName);
 
     file.mv(outputPath);
 
-    task.image = newFileName;
-    const response = await task.save();
+    //const image = await Image.create({title: newFileName, TaskId: task.id})
+    const image = await task.createImage({ title: newFileName });
 
-    res.json({ task: response });
+    res.json({ image });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const addReview = async (req, res, next) => {
+  try {
+    const { content, rating } = req.body;
+    const { id } = req.params
+    if (!content || !rating) {
+      throw new InvalidBody(['content', 'rating'])
+    };
+    const task = await Task.findByPk(id);
+
+    if (!task) {
+      throw new ResourceNotFound('Task');
+    };
+    if (task.Review !== null) {
+      await Review.destroy({ where: { TaskId: task.id } })
+    }
+    if (task.clientId !== req.user.id) {
+      throw new Forbidden();
+    };
+
+    const response = await task.createReview({ content, rating: +rating });
+
+    res.json({ response })
+
+  } catch (error) {
+    next(error)
+  }
+}
+
+const deleteImage = async (req, res, next) => {
+  try {
+    const id = req.params.id;
+
+    const image = await Image.findByPk(id);
+
+    if (!image) {
+      throw new ResourceNotFound("Image");
+    }
+    const task = await Task.findByPk(image.TaskId);
+
+    if (req.user.id != task.workerId) {
+      throw new Forbidden();
+    }
+
+    await image.destroy();
+
+    const filePath = path.join("taskUploads", image.title);
+    fs.unlinkSync(filePath);
+
+    res.json({ message: `image with id: ${id} deleted.` });
   } catch (error) {
     next(error);
   }
@@ -307,16 +438,81 @@ const deleteMessage = async (req, res, next) => {
   }
 };
 
+const addErrorReport = async (req, res, next) => {
+  try {
+    const taskId = req.params.id;
+    const { content } = req.body;
+
+    const task = await Task.findByPk(taskId);
+    if (!task) {
+      throw new ResourceNotFound("Task");
+    }
+    if (req.user.id !== task.clientId) {
+      throw new Forbidden();
+    }
+
+    const response = await task.createErrorReport({ content });
+
+    res.json({ response });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const addImageToErrorReport = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const errorReport = await ErrorReport.findByPk(id);
+
+    if (!errorReport) {
+      throw new ResourceNotFound("Error Report");
+    }
+
+    const task = await Task.findByPk(errorReport.TaskId);
+
+    if (task.clientId !== req.user.id) {
+      throw new Forbidden();
+    }
+
+    const file = req.files.image;
+
+    if (!file) {
+      throw new InvalidRequest("Please upload an image file");
+    }
+
+    if (!file.mimetype.startsWith("image")) {
+      throw new UnsupportedFileType("Only image files accepted");
+    }
+
+    const extension = path.extname(file.name);
+    const newFileName = uuid() + extension;
+    const outputPath = path.join("errorUploads", newFileName);
+
+    file.mv(outputPath);
+
+    errorReport.image = newFileName;
+    const response = await errorReport.save();
+    console.log(response);
+    res.json({ response });
+  } catch (error) {
+    next(error);
+  }
+};
 module.exports = {
   createTask,
   getTasks,
   getTasksById,
   getClientsTasks,
   getWorkerTasks,
+  getReviews,
   deleteTask,
   updateTask,
   addImage,
+  deleteImage,
+  addReview,
   addMessage,
   getMessages,
   deleteMessage,
+  addErrorReport,
+  addImageToErrorReport,
 };

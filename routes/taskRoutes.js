@@ -19,10 +19,31 @@ taskRoutes.post(
 );
 
 taskRoutes.post(
+  "/tasks/:id/error",
+  authToken,
+  authRoles(["client"]),
+  taskController.addErrorReport
+);
+
+taskRoutes.post(
+  "/errors/:id/image",
+  authToken,
+  authRoles(["client"]),
+  taskController.addImageToErrorReport
+);
+
+taskRoutes.post(
   "/tasks/:id/messages",
   authToken,
   authRoles(["worker", "client"]),
   taskController.addMessage
+);
+
+taskRoutes.post(
+  "/tasks/:id/review",
+  authToken,
+  authRoles(["client"]),
+  taskController.addReview
 );
 
 taskRoutes.get(
@@ -46,6 +67,8 @@ taskRoutes.get(
   taskController.getMessages
 );
 
+taskRoutes.get('/reviews', authToken, authRoles(['admin']), taskController.getReviews)
+
 taskRoutes.patch(
   "/tasks/:id",
   authToken,
@@ -58,6 +81,13 @@ taskRoutes.delete(
   authToken,
   authRoles(["admin"]),
   taskController.deleteTask
+);
+
+taskRoutes.delete(
+  "/images/:id",
+  authToken,
+  authRoles(["worker"]),
+  taskController.deleteImage
 );
 
 taskRoutes.delete(
