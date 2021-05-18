@@ -1,6 +1,11 @@
 # Inge Bra Bygg
 
 A REST API built by Pelle Lindroth, Renzo Santa Maria and Emma Dawson.
+### CLEAN INSTALL
+- Clone codebase
+- Run npm install
+- Add .env file with variables JWT_SECRET and PORT
+- Run project with npm start
 
 | Endpoint                 | Requested information                                  | AuthRoles             | Expected response                                |
 | ------------------------ | ------------------------------------------------------ | --------------------- | ------------------------------------------------ |
